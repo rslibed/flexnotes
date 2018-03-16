@@ -5,7 +5,7 @@ import { Editor, getEventRange, getEventTransfer } from 'slate-react';
 import { Block, Value } from 'slate';
 import { isKeyHotkey } from 'is-hotkey';
 import { connect } from 'react-redux';
-import { updateBinderArray } from '../actions';
+import { saveNotes, notesUpdated, autoSaveNotes } from '../actions';
 import isImage from 'is-image'
 import isUrl from 'is-url'
 
@@ -99,36 +99,52 @@ class Notes extends Component {
         super(props);
         this.state = {
             value: initialValue,
-            save: false
+            save: true
         };
 
         this.submitNotes = this.submitNotes.bind(this);
-        this.submitNotes = _.debounce(this.submitNotes, 1300);
+        this.submitNotes = _.debounce(this.submitNotes, 2000);
+        this.notesChange = this.notesChange.bind(this);
+        // this.notesChange = _.debounce(this.notesChange, 1000);
+        this.onChange = this.onChange.bind(this);
     }
 
-    onChange = ({ value }) => {
+    onChange({ value }) {
         this.setState({ value, save: false });
+        this.notesChange();
         this.submitNotes();
     };
+
+    notesChange(){
+        if(this.props.interface_obj.save_notes === true){
+            this.props.notesUpdated();
+        }
+    }
 
     submitNotes() {
         let { interface_obj } = this.props;
         const { value } = this.state;
-        const content = JSON.stringify(value.toJSON());
-        axios.put('/api/note', {
-            document: { content },
-            binderID: interface_obj.binder_id,
-            tabID: interface_obj.tab_id,
-            pageID: interface_obj.page_id
-        }).then(
-            this.setState({
-                ...value,
-                save: true
-            })
-        ).catch((err)=>{
-            console.log("not logged in: ", err);
-            window.location = '/';
-        })
+        
+        // const content = JSON.stringify(value.toJSON());
+        this.props.autoSaveNotes(value, interface_obj);
+        // this.setState({
+        //     ...value,
+        //     save: true
+        // })
+        // axios.put('/api/note', {
+        //     document: { content },
+        //     binderID: interface_obj.binder_id,
+        //     tabID: interface_obj.tab_id,
+        //     pageID: interface_obj.page_id
+        // }).then(
+        //     this.setState({
+        //         ...value,
+        //         save: true
+        //     })
+        // ).catch((err) => {
+        //     console.log("not logged in: ", err);
+        //     window.location = '/';
+        // })
     }
 
     componentWillMount() {
@@ -155,19 +171,46 @@ class Notes extends Component {
                 const lastContent = JSON.parse(page_arr_obj[pageIndex].notes.document.content);
                 this.setState({
                     value: Value.fromJSON(lastContent),
-                    save: false
+                    save: true
                 })
             } else {
                 this.setState({
                     value: initialValue,
-                    save: false
+                    save: true
                 })
             }
         }
     }
 
-    componentWillReceiveProps(nextProps) {
+    // componentDidUpdate(prevState){
+    //     if(prevState.save !== this.state.save){
+    //         if(this.state.save === false){
+    //             this.props.notesUpdated();
+    //         }
+    //     }
+    // }
+
+    componentWillReceiveProps(nextProps, nextState) {
+        
+        if(nextProps.interface_obj.save_notes !== this.props.interface_obj.save_notes){
+            //if(nextProps.interface_obj.save_notes === true && nextState.save === false){
+                //this.props.notesUpdated();
+                //const { value } = this.state;
+                // this.setState({
+                //     //...value,
+                //     save: true
+                // });
+            //}
+        }
+
         if (nextProps.interface_obj.page_id !== this.props.interface_obj.page_id) {
+            if(this.props.interface_obj.save_notes === false){
+                const { value } = this.state;
+                //console.log('notes cwrp');
+                this.props.saveNotes(value, this.props.interface_obj);
+            }
+
+            //this.props.notesUpdated();
             let { tab_arr_obj } = nextProps.binderObj;
             let { interface_obj } = nextProps;
 
@@ -190,6 +233,7 @@ class Notes extends Component {
                 }
                 if (pageIndex !== null && tab_arr_obj[tabIndex].page_arr_obj[pageIndex].hasOwnProperty("notes")) {
                     const lastContent = JSON.parse(page_arr_obj[pageIndex].notes.document.content);
+                    //console.log("NOTES LAST CONTENT:", lastContent.document.nodes["0"].nodes["0"].leaves["0"]);
                     this.setState({
                         value: Value.fromJSON(lastContent),
                         save: false
@@ -238,17 +282,17 @@ class Notes extends Component {
 
         let colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'];
 
-        if(colors[0]){
+        if (colors[0]) {
             mark = 'red'
-        } else if(colors[1]){
+        } else if (colors[1]) {
             mark = 'orange'
-        } else if(colors[2]){
+        } else if (colors[2]) {
             mark = 'yellow'
-        } else if(colors[3]){
+        } else if (colors[3]) {
             mark = 'green'
-        } else if(colors[4]){
+        } else if (colors[4]) {
             mark = 'blue'
-        } else if(colors[5]){
+        } else if (colors[5]) {
             mark = 'purple'
         }
 
@@ -576,7 +620,7 @@ class Notes extends Component {
                         </div>
                     </div>
                 </div>
-                <h6 className="saveNotes" >{this.state.save ? "Notes saved" : "Saving notes..."}</h6>
+                <h6 className="saveNotes" >{this.state.save ? "Notes saved" : ""}</h6>
             </div>
         )
     };
@@ -616,5 +660,5 @@ function mapStateToProps(state) {
     }
 }
 
-export default connect(mapStateToProps, { updateBinderArray })(Notes);
+export default connect(mapStateToProps, { saveNotes, notesUpdated, autoSaveNotes })(Notes);
 

@@ -222,7 +222,7 @@ class Dashboard extends Component {
           break;
       }
       dashboard = (
-        <div className="mobilePanel-container">
+        <div className="mobilePanel-container mobilePanel-container-safari">
           {mobilePanel}
           <ul className="mobileNav">
             <li
@@ -232,8 +232,8 @@ class Dashboard extends Component {
               <div
                 className={`${mobilePanelIndex === 1 ? 'activeMobile' : ''}`}
               >
-                <i className="small material-icons">dehaze</i>
-                <br />Menu
+                <i className="small material-icons">storage</i>
+                <br />Binders
               </div>
             </li>
             <li
@@ -254,7 +254,7 @@ class Dashboard extends Component {
                 <i className="small material-icons mobile-icon">
                   video_library
                 </i>
-                <br />Video
+                <br />Videos
               </div>
             </li>
             <li
