@@ -40,6 +40,25 @@ const initialValue = Value.fromJSON({
     }
 });
 
+// --------------------------- EMOJIS  ---------------------------
+
+const EMOJIS = [
+    '😃',
+    '😬',
+    '😂',
+    '😎',
+    '😍',
+    '😴',
+    '👍',
+    '👌',
+    '💋',
+    '⁉️',
+    '❤️',
+    '💩'
+]
+
+const noop = e => e.preventDefault();
+
 // --------------------------- UNDO AND REDO  ---------------------------
 
 const ToolbarButton = props => (
@@ -99,7 +118,8 @@ class Notes extends Component {
         super(props);
         this.state = {
             value: initialValue,
-            save: true
+            save: true,
+            isReadOnly: false
         };
 
         this.submitNotes = this.submitNotes.bind(this);
@@ -107,6 +127,8 @@ class Notes extends Component {
         this.notesChange = this.notesChange.bind(this);
         // this.notesChange = _.debounce(this.notesChange, 1000);
         this.onChange = this.onChange.bind(this);
+
+        this.toggleReadOnly = this.toggleReadOnly.bind(this)
     }
 
     onChange({ value }) {
@@ -280,7 +302,7 @@ class Notes extends Component {
             return
         }
 
-        let colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'];
+        let colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'background'];
 
         if (colors[0]) {
             mark = 'red'
@@ -294,6 +316,8 @@ class Notes extends Component {
             mark = 'blue'
         } else if (colors[5]) {
             mark = 'purple'
+        } else if (colors[6]) {
+            mark = 'highlight'
         }
 
         event.preventDefault();
@@ -363,7 +387,7 @@ class Notes extends Component {
         const onMouseDown = event => this.onClickMark(event, type);
 
         return (
-            <span onMouseDown={onMouseDown} data-active={isActive}>
+            <span onMouseDown={onMouseDown} data-active={isActive} title={type}>
                 <span className="material-icons notesIcons colorCircles richText">{icon}</span>
             </span>
         )
@@ -448,35 +472,35 @@ class Notes extends Component {
 
     // --------------------------- SEARCH HIGHLIGHTING  ---------------------------
 
-    onInputChange = (event) => {
-        const { value } = this.state;
-        const string = event.target.value;
-        const texts = value.document.getTexts();
-        const decorations = [];
-
-        texts.forEach((node) => {
-            const { key, text } = node;
-            const parts = text.split(string);
-            let offset = 0;
-
-            parts.forEach((part, i) => {
-                if (i !== 0) {
-                    decorations.push({
-                        anchorKey: key,
-                        anchorOffset: offset - string.length,
-                        focusKey: key,
-                        focusOffset: offset,
-                        marks: [{ type: 'highlight' }],
-                    })
-                }
-
-                offset = offset + part.length + string.length
-            })
-        });
-
-        const change = value.change().setValue({ decorations });
-        this.onChange(change)
-    };
+    // onInputChange = (event) => {
+    //     const { value } = this.state;
+    //     const string = event.target.value;
+    //     const texts = value.document.getTexts();
+    //     const decorations = [];
+    //
+    //     texts.forEach((node) => {
+    //         const { key, text } = node;
+    //         const parts = text.split(string);
+    //         let offset = 0;
+    //
+    //         parts.forEach((part, i) => {
+    //             if (i !== 0) {
+    //                 decorations.push({
+    //                     anchorKey: key,
+    //                     anchorOffset: offset - string.length,
+    //                     focusKey: key,
+    //                     focusOffset: offset,
+    //                     marks: [{ type: 'highlight' }],
+    //                 })
+    //             }
+    //
+    //             offset = offset + part.length + string.length
+    //         })
+    //     });
+    //
+    //     const change = value.change().setValue({ decorations });
+    //     this.onChange(change)
+    // };
 
     // --------------------------- IMAGES  ---------------------------
 
@@ -522,6 +546,40 @@ class Notes extends Component {
         }
     };
 
+    // --------------------------- READ ONLY  ---------------------------
+
+    toggleReadOnly = () => {
+        if (this.state.isReadOnly) {
+            this.setState({
+                isReadOnly: false
+            });
+        } else {
+            this.setState({
+                isReadOnly: true
+            });
+        }
+    };
+
+
+    // --------------------------- EMOJIS  ---------------------------
+
+    onClickEmoji = (e, code) => {
+        e.preventDefault()
+        const { value } = this.state
+        const change = value.change()
+
+        change
+            .insertInline({
+                type: 'emoji',
+                isVoid: true,
+                data: { code },
+            })
+            .collapseToStartOfNextText()
+            .focus()
+
+        this.onChange(change)
+    }
+
     // --------------------------- ALL  ---------------------------
 
     renderMark = (props) => {
@@ -532,7 +590,6 @@ class Notes extends Component {
             case 'code': return <code>{children}</code>;
             case 'italic': return <em>{children}</em>;
             case 'underlined': return <u>{children}</u>;
-            // case 'tab': return <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{children}</span>;
             case 'red': return <span style={{ color: '#FF0000' }}>{children}</span>;
             case 'orange': return <span style={{ color: '#FF7F00' }}>{children}</span>;
             case 'yellow': return <span style={{ color: '#FFFF00' }}>{children}</span>;
@@ -546,21 +603,22 @@ class Notes extends Component {
         const { attributes, children, node, isSelected } = props;
         switch (node.type) {
             case 'block-quote': return <blockquote {...attributes}>{children}</blockquote>;
-            case 'bulleted-list': return <ul {...attributes}>{children}</ul>;
+
             case 'heading-one': return <h5 {...attributes}>{children}</h5>;
             // case 'heading-two': return <h2 {...attributes}>{children}</h4>;
 
-            case 'justifyLeft': return <div style={{ textAlign: 'left' }}>{children}</div>;
-            case 'justifyCenter': return <div style={{ textAlign: 'center' }}>{children}</div>;
-            case 'justifyRight': return <div style={{ textAlign: 'right' }}>{children}</div>;
-            case 'justifyFull': return <div style={{ textAlign: 'justify' }}>{children}</div>;
+            case 'left': return <div style={{ textAlign: 'left' }}>{children}</div>;
+            case 'center': return <div style={{ textAlign: 'center' }}>{children}</div>;
+            case 'right': return <div style={{ textAlign: 'right' }}>{children}</div>;
+            case 'justify': return <div style={{ textAlign: 'justify' }}>{children}</div>;
 
             case 'list-item': return <li {...attributes}>{children}</li>;
+            case 'bulleted-list': return <ul className="notesUnorderedList" {...attributes}>{children}</ul>;
             case 'numbered-list': return <ol {...attributes}>{children}</ol>;
             case 'link': {
                 const { data } = node;
                 const href = data.get('href');
-                return <a {...attributes} href={href} title="right-click on link to open">{children}</a>
+                return <a {...attributes} href={href} target="_blank" title="right-click on link to open">{children}</a>
             }
             case 'image': {
                 const src = node.data.get('src');
@@ -568,6 +626,20 @@ class Notes extends Component {
                 const style = { display: 'block' };
                 return (
                     <img src={src} className={className} style={style} {...attributes} />
+                )
+            }
+            case 'emoji': {
+                const { data } = node
+                const code = data.get('code')
+                return (
+                    <span
+                        className={`emoji ${isSelected ? 'selected' : ''}`}
+                        {...props.attributes}
+                        contentEditable={false}
+                        onDrop={noop}
+                    >
+            {code}
+          </span>
                 )
             }
 
@@ -581,35 +653,27 @@ class Notes extends Component {
                 <div className="stylingButtons">
                     <ToolbarButton icon="undo" onMouseDown={this.onClickUndo} />
                     <ToolbarButton icon="redo" onMouseDown={this.onClickRedo} />
-                    {this.renderMarkButton('bold', 'format_bold')}
-                    {this.renderMarkButton('italic', 'format_italic')}
-                    {this.renderMarkButton('underlined', 'format_underlined')}
-                    {this.renderBlockButton('justifyLeft', 'format_align_left')}
-                    {this.renderBlockButton('justifyCenter', 'format_align_center')}
-                    {this.renderBlockButton('justifyRight', 'format_align_right')}
-                    {this.renderBlockButton('justifyFull', 'format_align_justify')}
-                    {this.renderMarkButton('code', 'code')}
-                    {this.renderBlockButton('heading-one', 'format_size')}
-                    {/*{this.renderBlockButton('heading-two', 'title')}*/}
-                    {this.renderBlockButton('block-quote', 'format_quote')}
-                    {this.renderBlockButton('numbered-list', 'format_list_numbered')}
-                    {/*{this.renderBlockButton('bulleted-list', 'format_list_bulleted')}*/}
                     <span className="styleSquare" title="link" onMouseDown={this.onClickLink} data-active={this.hasLinks}>
                         <span className="material-icons notesIcons link">link</span>
                     </span>
                     <span className="styleSquare" title="image" onMouseDown={this.onClickImage}>
                         <span className="material-icons notesIcons image">image</span>
                     </span>
-                </div>
-                <div>
-                    <input
-                        className="search-input keyword"
-                        placeholder="Search keywords..."
-                        onChange={this.onInputChange}
-                    />
+                    {this.renderBlockButton('left', 'format_align_left')}
+                    {this.renderBlockButton('center', 'format_align_center')}
+                    {this.renderBlockButton('right', 'format_align_right')}
+                    {this.renderBlockButton('justify', 'format_align_justify')}
+                    {this.renderBlockButton('numbered-list', 'format_list_numbered')}
+                    {this.renderBlockButton('bulleted-list', 'format_list_bulleted')}
 
-                    <div className="colorOptions">
-                        <span className="colorDropbtn" title="font color"><i className="material-icons fontColorIcon notesIcons">format_color_text</i></span>
+                    <span className="styleSquare" title="read only" onClick={this.toggleReadOnly}>
+                        <span className="material-icons notesIcons">{this.state.isReadOnly ? 'lock' : 'lock_open'}</span>
+                    </span>
+                </div>
+
+                <div className="stylingButtons secondRow">
+                    <div className="hoverOptions">
+                        <span className="hoverDropbtn" title="font color"><i className="material-icons fontColorIcon notesIcons">format_color_text</i></span>
                         <div className="fontColor-options">
                             <p className="fontColor redFont">{this.renderMarkButton('red', 'lens')}</p>
                             <p className="fontColor orangeFont">{this.renderMarkButton('orange', 'lens')}</p>
@@ -617,6 +681,36 @@ class Notes extends Component {
                             <p className="fontColor greenFont">{this.renderMarkButton('green', 'lens')}</p>
                             <p className="fontColor blueFont">{this.renderMarkButton('blue', 'lens')}</p>
                             <p className="fontColor violetFont">{this.renderMarkButton('purple', 'lens')}</p>
+                        </div>
+                    </div>
+
+                    {this.renderMarkButton('highlight', 'edit')}
+                    {this.renderMarkButton('bold', 'format_bold')}
+                    {this.renderMarkButton('italic', 'format_italic')}
+                    {this.renderMarkButton('underlined', 'format_underlined')}
+                    {this.renderBlockButton('heading-one', 'format_size')}
+                    {/*{this.renderBlockButton('heading-two', 'title')}*/}
+                    {this.renderMarkButton('code', 'code')}
+                    {this.renderBlockButton('block-quote', 'format_quote')}
+
+
+                    {/*<input*/}
+                        {/*className="search-input keyword"*/}
+                        {/*placeholder="Search keywords..."*/}
+                        {/*onChange={this.onInputChange}*/}
+                    {/*/>*/}
+
+                    <div className="hoverOptions">
+                        <span className="hoverDropbtn" title="emoji"><i className="material-icons emojiIcon notesIcons">insert_emoticon</i></span>
+                        <div className="emoji-options">
+                            <p className="emojis">{EMOJIS.map((emoji, i) => {
+                                const onMouseDown = e => this.onClickEmoji(e, emoji)
+                                return (
+                                    <span key={i} className="button" onMouseDown={onMouseDown}>
+                                        <span className="material-icons textAreaEmoji">{emoji}</span>
+                                    </span>
+                                )
+                            })}</p>
                         </div>
                     </div>
                 </div>
@@ -644,6 +738,7 @@ class Notes extends Component {
                         onPaste={this.onPaste}
                         renderNode={this.renderNode}
                         renderMark={this.renderMark}
+                        readOnly={this.state.isReadOnly}
                         spellCheck
                     />
                 </div>
