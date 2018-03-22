@@ -9,9 +9,10 @@ const DEFAULT_STATE = {
     user_name: {},
     pull_from_db: false,
     sent_to_db: false,
-    save_notes: false,
+    save_notes: true,
     axios_error_response: '',
-    lfz_response: ''
+    lfz_response: '',
+    show_loader: false
 }
 
 export default function (state = DEFAULT_STATE, action) {
@@ -40,16 +41,20 @@ export default function (state = DEFAULT_STATE, action) {
         case types.DELETE_TAB:
         case types.ADD_PAGE:
         case types.DELETE_PAGE:
-            return { ...state, pull_from_db: true };
+        case types.EDIT_BINDER:
+        case types.EDIT_TAB:
+        case types.EDIT_PAGE:
+            return { ...state, pull_from_db: true};
         case types.UPDATE_BINDER_ARRAY:
-            return { ...state, pull_from_db: false,  sent_to_db: true };
+            return { ...state, pull_from_db: false,  sent_to_db: true};
         case types.ADD_TO_PLAYLIST:
         case types.SET_SLIDES_URL:
         case types.PANEL_TOP_LEFT_HEIGHT:
         case types.PANEL_TOP_LEFT_WIDTH:
         case types.PANEL_TOP_RIGHT_HEIGHT:
         case types.NUM_OF_PANELS:
-            return { ...state, pull_from_db: true};
+        case types.SAVE_NOTES:
+            return { ...state, pull_from_db: true, show_loader: true };
         case types.AXIOS_ERROR:
             return { ...state, axios_error_response: action.msg };
         case types.HIDE_NAV:
@@ -64,15 +69,10 @@ export default function (state = DEFAULT_STATE, action) {
             return {...state, lfz_response: true};
         case types.LFZ_WRONG_PASSWORD:
             return {...state, lfz_response: false};
+        case types.SHOW_LOADER:
+            return {...state, show_loader: true};
         case types.CLEAR_LOADER:
-            return {...state, sent_to_db: false};
-        case types.SAVE_NOTES:
-            return {...state, save_notes: true, pull_from_db: true};
-        case types.AUTO_SAVE_NOTES:
-        //case types.UPDATE_BINDER_OBJ:
-            return {...state, save_notes: true};
-        case types.NOT_SAVE_NOTES:
-            return {...state, save_notes: false};
+            return {...state, sent_to_db: false, show_loader: false};
         default:
             return state;
     }

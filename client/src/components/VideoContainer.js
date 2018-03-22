@@ -8,6 +8,7 @@ class VideoContainer extends Component {
     super(props);
     this.currentVideoList = this.props.currentPlaylistItems;
   }
+
   renderInput({ input, type, meta: { error, touched } }) {
     return (
       <div className="col s8 input-field">
@@ -26,28 +27,44 @@ class VideoContainer extends Component {
       </div>
     );
   }
-  handleYouTubeUrl(values) {
-    const youtubeLinkInput = values['youtube-url'];
-    if (!youtubeLinkInput || youtubeLinkInput.indexOf('youtu') === -1) {
-      return;
-    }
-    this.props.playPastedLinkVideo(values['youtube-url']);
-    this.props.getSavedVideoImg(values['youtube-url']).then(() => {
-      this.props.getSavedVideoTitle(values['youtube-url']).then(() => {
-        this.props.addVideoToDatabase(
-          values['youtube-url'],
-          this.props.savedVideoTitle,
-          this.props.savedVideoImage,
-          this.props.binderTabPageIds
-        );
+  handleVideoInput(values) {
+    this.props.handleYouTubeUrl(values).then(() => {
+      this.props.playPastedLinkVideo(this.props.videoId);
+      this.props.getSavedVideoImg(this.props.videoId).then(() => {
+        this.props.getSavedVideoTitle(this.props.videoId).then(() => {
+          this.props
+            .addVideoToDatabase(
+              this.props.videoId,
+              this.props.savedVideoTitle,
+              this.props.savedVideoImage,
+              this.props.binderTabPageIds
+            )
+            .then(() => {
+              this.props
+                .getVideoPlaylist(
+                  this.props.binderId,
+                  this.props.tabId,
+                  this.props.pageId
+                )
+                .then(() => {
+                  this.props.setVideoUrl(
+                    this.props.currentPlaylistItems[0].videoId
+                  );
+                });
+            });
+        });
       });
     });
+
+    this.props.reset();
+    this.props.slideOutVideoSearch(false);
   }
+
   render() {
     return (
       <div className="iframe-wrapper">
         <form
-          onSubmit={this.props.handleSubmit(this.handleYouTubeUrl.bind(this))}
+          onSubmit={this.props.handleSubmit(this.handleVideoInput.bind(this))}
           style={this.props.slideOutStyles}
           className="row video-slide-out-input slide-out-input"
         >
@@ -61,14 +78,7 @@ class VideoContainer extends Component {
                 type="button"
                 className="btn vidList vid-left-arrow video-btn"
                 onClick={() => {
-                  this.props.getResultStyles(
-                    this.props.resultsStyles,
-                    this.props.toggleResultsBool
-                  );
-                  this.props.getOpacityDisplay(
-                    this.props.opacityContainer,
-                    this.props.toggleResultsBool
-                  );
+                  this.props.getResultStyles(this.props.toggleResultsBool);
                 }}
               >
                 <i className="fa fa-youtube" aria-hidden="true" />
@@ -87,10 +97,7 @@ class VideoContainer extends Component {
         <div
           className="arrow-container"
           onClick={() => {
-            this.props.slideOutVideoSearch(
-              this.props.toggleSlideOut,
-              this.props.slideOutStyles
-            );
+            this.props.slideOutVideoSearch(this.props.toggleSlideOut);
           }}
         >
           {!this.props.toggleSlideOut
@@ -139,15 +146,14 @@ VideoContainer = reduxForm({
 function mapStateToProps(state) {
   return {
     binderTabPageIds: state.interface,
-    resultsStyles: state.video.resultsStyles,
     toggleResultsBool: state.video.toggleResults,
-    opacityContainer: state.video.opacityDisplay,
     slideOutStyles: state.video.videoLinkSlideOut,
     toggleSlideOut: state.video.toggleSlideOut,
     savedVideoTitle: state.video.savedVideoTitle,
     savedVideoImage: state.video.savedVideoImage,
     playlistStyles: state.video.playlistStyles,
-    videoLink: state.video.videoLink
+    videoLink: state.video.videoLink,
+    videoId: state.video.videoId
   };
 }
 

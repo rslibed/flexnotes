@@ -5,7 +5,7 @@ import { Editor, getEventRange, getEventTransfer } from 'slate-react';
 import { Block, Value } from 'slate';
 import { isKeyHotkey } from 'is-hotkey';
 import { connect } from 'react-redux';
-import { saveNotes, notesUpdated, autoSaveNotes } from '../actions';
+import { saveNotes, autoSaveNotes, showLoader } from '../actions';
 import isImage from 'is-image'
 import isUrl from 'is-url'
 
@@ -47,15 +47,15 @@ const EMOJIS = [
     '😬',
     '😂',
     '😎',
+    '🤯',
     '😍',
-    '😴',
     '👍',
     '👌',
     '💋',
-    '⁉️',
     '❤️',
+    '⁉️',
     '💩'
-]
+];
 
 const noop = e => e.preventDefault();
 
@@ -124,49 +124,23 @@ class Notes extends Component {
 
         this.submitNotes = this.submitNotes.bind(this);
         this.submitNotes = _.debounce(this.submitNotes, 2000);
-        this.notesChange = this.notesChange.bind(this);
-        // this.notesChange = _.debounce(this.notesChange, 1000);
         this.onChange = this.onChange.bind(this);
 
-        this.toggleReadOnly = this.toggleReadOnly.bind(this)
+        this.toggleReadOnly = this.toggleReadOnly.bind(this);
     }
 
     onChange({ value }) {
         this.setState({ value, save: false });
-        this.notesChange();
         this.submitNotes();
     };
 
-    notesChange(){
-        if(this.props.interface_obj.save_notes === true){
-            this.props.notesUpdated();
-        }
-    }
 
     submitNotes() {
         let { interface_obj } = this.props;
         const { value } = this.state;
-        
-        // const content = JSON.stringify(value.toJSON());
+
         this.props.autoSaveNotes(value, interface_obj);
-        // this.setState({
-        //     ...value,
-        //     save: true
-        // })
-        // axios.put('/api/note', {
-        //     document: { content },
-        //     binderID: interface_obj.binder_id,
-        //     tabID: interface_obj.tab_id,
-        //     pageID: interface_obj.page_id
-        // }).then(
-        //     this.setState({
-        //         ...value,
-        //         save: true
-        //     })
-        // ).catch((err) => {
-        //     console.log("not logged in: ", err);
-        //     window.location = '/';
-        // })
+
     }
 
     componentWillMount() {
@@ -204,32 +178,40 @@ class Notes extends Component {
         }
     }
 
-    // componentDidUpdate(prevState){
-    //     if(prevState.save !== this.state.save){
-    //         if(this.state.save === false){
-    //             this.props.notesUpdated();
-    //         }
-    //     }
-    // }
-
     componentWillReceiveProps(nextProps, nextState) {
-        
-        if(nextProps.interface_obj.save_notes !== this.props.interface_obj.save_notes){
-            //if(nextProps.interface_obj.save_notes === true && nextState.save === false){
-                //this.props.notesUpdated();
-                //const { value } = this.state;
-                // this.setState({
-                //     //...value,
-                //     save: true
-                // });
-            //}
-        }
 
         if (nextProps.interface_obj.page_id !== this.props.interface_obj.page_id) {
-            if(this.props.interface_obj.save_notes === false){
-                const { value } = this.state;
-                //console.log('notes cwrp');
-                this.props.saveNotes(value, this.props.interface_obj);
+            const { value } = this.state;
+
+            if (this.props.binderObj.tab_arr_obj) {
+                let tabArrLength = this.props.binderObj.tab_arr_obj.length;
+                let tabIndex = null;
+                let pageIndex = null;
+                for (let i = 0; i < tabArrLength; i++) {
+                    if (this.props.interface_obj.tab_id === this.props.binderObj.tab_arr_obj[i]._id) {
+                        if(this.props.interface_obj.tab_id === nextProps.binderObj.tab_arr_obj[i]._id){
+                            tabIndex = i;
+                            break;
+                        }
+                    }
+                }
+                if(tabIndex !== null){
+                    let { page_arr_obj } = this.props.binderObj.tab_arr_obj[tabIndex];
+                    for (let i = 0; i < page_arr_obj.length; i++) {
+                        if (this.props.interface_obj.page_id === page_arr_obj[i]._id) {
+                            pageIndex = i;
+                            break;
+                        }
+                    }
+                    if (pageIndex !== null && this.props.binderObj.tab_arr_obj[tabIndex].page_arr_obj[pageIndex].hasOwnProperty("notes")) {
+                        const prevContent = page_arr_obj[pageIndex].notes.document.content;
+                        const stateValue = JSON.stringify(value.toJSON());
+                        if(stateValue !== prevContent){
+                            this.props.showLoader();
+                            this.props.saveNotes(value, this.props.interface_obj);
+                        }
+                    }
+                }
             }
 
             //this.props.notesUpdated();
@@ -257,13 +239,13 @@ class Notes extends Component {
                     const lastContent = JSON.parse(page_arr_obj[pageIndex].notes.document.content);
                     //console.log("NOTES LAST CONTENT:", lastContent.document.nodes["0"].nodes["0"].leaves["0"]);
                     this.setState({
-                        value: Value.fromJSON(lastContent),
-                        save: false
+                        value: Value.fromJSON(lastContent)
+                        //save: false
                     })
                 } else {
                     this.setState({
-                        value: initialValue,
-                        save: false
+                        value: initialValue
+                        //save: false
                     })
                 }
             }
@@ -294,30 +276,11 @@ class Notes extends Component {
         } else if (isCodeHotkey(event)) {
             mark = 'code'
         } else if (isTabHotkey(event)) {
-            mark = 'tab'
-            event.preventDefault();
+            mark = 'tab';
             change.insertText("     ");
             return true
         } else {
             return
-        }
-
-        let colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'background'];
-
-        if (colors[0]) {
-            mark = 'red'
-        } else if (colors[1]) {
-            mark = 'orange'
-        } else if (colors[2]) {
-            mark = 'yellow'
-        } else if (colors[3]) {
-            mark = 'green'
-        } else if (colors[4]) {
-            mark = 'blue'
-        } else if (colors[5]) {
-            mark = 'purple'
-        } else if (colors[6]) {
-            mark = 'highlight'
         }
 
         event.preventDefault();
@@ -389,6 +352,17 @@ class Notes extends Component {
         return (
             <span onMouseDown={onMouseDown} data-active={isActive} title={type}>
                 <span className="material-icons notesIcons colorCircles richText">{icon}</span>
+            </span>
+        )
+    };
+
+    renderFontButton = (type, fontStyle) => {
+        const isActive = this.hasMark(type);
+        const onMouseDown = event => this.onClickMark(event, type);
+
+        return (
+            <span onMouseDown={onMouseDown} data-active={isActive} title={type} className="fontStyleButton">
+                <span>{fontStyle}</span>
             </span>
         )
     };
@@ -533,7 +507,7 @@ class Notes extends Component {
                     editor.change((c) => {
                         c.call(insertImage, reader.result, target)
                     })
-                })
+                });
 
                 reader.readAsDataURL(file)
             }
@@ -560,13 +534,12 @@ class Notes extends Component {
         }
     };
 
-
     // --------------------------- EMOJIS  ---------------------------
 
     onClickEmoji = (e, code) => {
-        e.preventDefault()
-        const { value } = this.state
-        const change = value.change()
+        e.preventDefault();
+        const { value } = this.state;
+        const change = value.change();
 
         change
             .insertInline({
@@ -574,11 +547,11 @@ class Notes extends Component {
                 isVoid: true,
                 data: { code },
             })
-            .collapseToStartOfNextText()
-            .focus()
+            // .collapseToStartOfNextText()
+            .focus();
 
         this.onChange(change)
-    }
+    };
 
     // --------------------------- ALL  ---------------------------
 
@@ -590,12 +563,22 @@ class Notes extends Component {
             case 'code': return <code>{children}</code>;
             case 'italic': return <em>{children}</em>;
             case 'underlined': return <u>{children}</u>;
+
+            case 'header': return <span style={{ fontSize: '1.5em' }}>{children}</span>;
+
             case 'red': return <span style={{ color: '#FF0000' }}>{children}</span>;
             case 'orange': return <span style={{ color: '#FF7F00' }}>{children}</span>;
             case 'yellow': return <span style={{ color: '#FFFF00' }}>{children}</span>;
             case 'green': return <span style={{ color: '#00FF00' }}>{children}</span>;
             case 'blue': return <span style={{ color: '#0000FF' }}>{children}</span>;
             case 'purple': return <span style={{ color: '#9400D3' }}>{children}</span>;
+
+            case 'arial': return <span style={{ fontFamily: 'Arial' }}>{children}</span>;
+            case 'comic sans': return <span style={{ fontFamily: 'Comic Sans MS' }}>{children}</span>;
+            case 'courier new': return <span style={{ fontFamily: 'Courier New' }}>{children}</span>;
+            case 'impact': return <span style={{ fontFamily: 'Impact' }}>{children}</span>;
+            case 'roboto': return <span style={{ fontFamily: 'Roboto' }}>{children}</span>;
+            case 'times new roman': return <span style={{ fontFamily: 'Times New Roman' }}>{children}</span>;
         }
     };
 
@@ -603,10 +586,6 @@ class Notes extends Component {
         const { attributes, children, node, isSelected } = props;
         switch (node.type) {
             case 'block-quote': return <blockquote {...attributes}>{children}</blockquote>;
-
-            case 'heading-one': return <h5 {...attributes}>{children}</h5>;
-            // case 'heading-two': return <h2 {...attributes}>{children}</h4>;
-
             case 'left': return <div style={{ textAlign: 'left' }}>{children}</div>;
             case 'center': return <div style={{ textAlign: 'center' }}>{children}</div>;
             case 'right': return <div style={{ textAlign: 'right' }}>{children}</div>;
@@ -638,8 +617,8 @@ class Notes extends Component {
                         contentEditable={false}
                         onDrop={noop}
                     >
-            {code}
-          </span>
+                        {code}
+                    </span>
                 )
             }
 
@@ -672,8 +651,20 @@ class Notes extends Component {
                 </div>
 
                 <div className="stylingButtons secondRow">
+                    <div className="font-dropdown">
+                        <span className="material-icons notesIcons richText">font_download</span>
+                        <div className="font-styles">
+                            <p className="fonts arial">{this.renderFontButton('arial', 'Arial')}</p>
+                            <p className="fonts comic">{this.renderFontButton('comic sans', 'Comic Sans')}</p>
+                            <p className="fonts courier">{this.renderFontButton('courier new', 'Courier New')}</p>
+                            <p className="fonts impact">{this.renderFontButton('impact', 'Impact')}</p>
+                            <p className="fonts roboto">{this.renderFontButton('roboto', 'Roboto')}</p>
+                            <p className="fonts times">{this.renderFontButton('times new roman', 'Times New Roman')}</p>
+                        </div>
+                    </div>
+
                     <div className="hoverOptions">
-                        <span className="hoverDropbtn" title="font color"><i className="material-icons fontColorIcon notesIcons">format_color_text</i></span>
+                        <span className="hoverDropbtn"><i className="material-icons fontColorIcon notesIcons">format_color_text</i></span>
                         <div className="fontColor-options">
                             <p className="fontColor redFont">{this.renderMarkButton('red', 'lens')}</p>
                             <p className="fontColor orangeFont">{this.renderMarkButton('orange', 'lens')}</p>
@@ -688,11 +679,9 @@ class Notes extends Component {
                     {this.renderMarkButton('bold', 'format_bold')}
                     {this.renderMarkButton('italic', 'format_italic')}
                     {this.renderMarkButton('underlined', 'format_underlined')}
-                    {this.renderBlockButton('heading-one', 'format_size')}
-                    {/*{this.renderBlockButton('heading-two', 'title')}*/}
+                    {this.renderMarkButton('header', 'format_size')}
                     {this.renderMarkButton('code', 'code')}
                     {this.renderBlockButton('block-quote', 'format_quote')}
-
 
                     {/*<input*/}
                         {/*className="search-input keyword"*/}
@@ -701,7 +690,7 @@ class Notes extends Component {
                     {/*/>*/}
 
                     <div className="hoverOptions">
-                        <span className="hoverDropbtn" title="emoji"><i className="material-icons emojiIcon notesIcons">insert_emoticon</i></span>
+                        <span className="hoverDropbtn"><i className="material-icons emojiIcon notesIcons">insert_emoticon</i></span>
                         <div className="emoji-options">
                             <p className="emojis">{EMOJIS.map((emoji, i) => {
                                 const onMouseDown = e => this.onClickEmoji(e, emoji)
@@ -728,6 +717,7 @@ class Notes extends Component {
                     <Editor
                         className="editor"
                         style={{ overflowY: scroll }}
+                        style={{ fontFamily: this.fontStyle}}
                         placeholder="Enter notes..."
                         value={this.state.value}
                         onChange={this.onChange}
@@ -755,5 +745,5 @@ function mapStateToProps(state) {
     }
 }
 
-export default connect(mapStateToProps, { saveNotes, notesUpdated, autoSaveNotes })(Notes);
+export default connect(mapStateToProps, { saveNotes, autoSaveNotes, showLoader })(Notes);
 

@@ -4,6 +4,14 @@ import { Field, reduxForm } from 'redux-form';
 import * as actions from '../actions';
 
 class VideoPlaylist extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      deletedVideoList: {}
+    };
+    this.deleteVideo = this.deleteVideo.bind(this);
+    this.incrementDeleteCounter = this.incrementDeleteCounter.bind(this);
+  }
   renderInput({ input, type, meta: { error, touched } }) {
     return (
       <div className="col s9 input-field">
@@ -22,30 +30,79 @@ class VideoPlaylist extends Component {
       </div>
     );
   }
-  handleYouTubeUrl(values) {
-    const youtubeLinkInput = values['youtube-url'];
-    if (!youtubeLinkInput || youtubeLinkInput.indexOf('youtu') === -1) {
-      return;
-    }
-    this.props.playPastedLinkVideo(values['youtube-url']);
-    this.props.getSavedVideoImg(values['youtube-url']).then(() => {
-      this.props.getSavedVideoTitle(values['youtube-url']).then(() => {
-        this.props.addVideoToDatabase(
-          values['youtube-url'],
-          this.props.savedVideoTitle,
-          this.props.savedVideoImage,
-          this.props.binderTabPageIds
-        );
+  handleVideoInput(values) {
+    this.props.handleYouTubeUrl(values).then(() => {
+      this.props.playPastedLinkVideo(this.props.videoId);
+      this.props.getSavedVideoImg(this.props.videoId).then(() => {
+        this.props.getSavedVideoTitle(this.props.videoId).then(() => {
+          this.props
+            .addVideoToDatabase(
+              this.props.videoId,
+              this.props.savedVideoTitle,
+              this.props.savedVideoImage,
+              this.props.binderTabPageIds
+            )
+            .then(() => {
+              this.props
+                .getVideoPlaylist(
+                  this.props.binderId,
+                  this.props.tabId,
+                  this.props.pageId
+                )
+                .then(() => {
+                  this.props.setVideoUrl(
+                    this.props.currentPlaylistItems[0].videoId
+                  );
+                });
+            });
+        });
       });
+    });
+    this.props.reset();
+    this.props.togglePlaylist('translateY(0%)');
+    this.props.slideOutVideoSearch(false);
+  }
+  incrementDeleteCounter(videoId) {
+    const { deletedVideoList } = this.state;
+    if (deletedVideoList[videoId] !== undefined) {
+      deletedVideoList[videoId] += 1;
+    } else {
+      deletedVideoList[videoId] = 1;
+    }
+    this.setState({
+      deletedVideoList
     });
   }
   deleteVideo(videoId) {
-    this.props.removeVideoFromPlaylist(
-      this.props.binderId,
-      this.props.tabId,
-      this.props.pageId,
-      videoId
-    );
+    const { deletedVideoList } = this.state;
+    for (var key in deletedVideoList) {
+      if (deletedVideoList[key] > 1) {
+        return;
+      } else {
+        this.props
+          .removeVideoFromPlaylist(
+            this.props.binderId,
+            this.props.tabId,
+            this.props.pageId,
+            videoId
+          )
+          .then(() => {
+            this.props
+              .getVideoPlaylist(
+                this.props.binderId,
+                this.props.tabId,
+                this.props.pageId
+              )
+              .then(() => {
+                if (this.props.currentPlaylistItems.length > 0) {
+                  this.props.setVideoUrl(
+                    this.props.currentPlaylistItems[0].videoId
+                  );
+                }
+              });
+          });
+      }
+    }
   }
   render() {
     const { playlistStyles } = this.props;
@@ -69,13 +126,14 @@ class VideoPlaylist extends Component {
                 onClick={() => {
                   this.props.playVideo(item.videoId);
                   this.props.setVideoUrl(item.videoId);
-                  this.props.togglePlaylist(this.props.playlistStyles);
+                  this.props.togglePlaylist('translateY(0%)');
                 }}
               >
                 <i className="material-icons">play_arrow</i>
               </button>
               <button
                 onClick={() => {
+                  this.incrementDeleteCounter(item._id);
                   this.deleteVideo(item._id);
                 }}
                 className="btn btn-small playlist-delete col s1"
@@ -100,7 +158,7 @@ class VideoPlaylist extends Component {
         </i>
         <ul className="video-playlist collection">
           <form
-            onSubmit={this.props.handleSubmit(this.handleYouTubeUrl.bind(this))}
+            onSubmit={this.props.handleSubmit(this.handleVideoInput.bind(this))}
             style={this.props.slideOutStyles}
             className="row"
           >
@@ -146,11 +204,10 @@ VideoPlaylist = reduxForm({
 function mapStateToProps(state) {
   return {
     playlistStyles: state.video.playlistStyles,
-    interface_obj: state.interface,
-    binderObj: state.binder.binderObj,
     binderTabPageIds: state.interface,
     savedVideoTitle: state.video.savedVideoTitle,
-    savedVideoImage: state.video.savedVideoImage
+    savedVideoImage: state.video.savedVideoImage,
+    videoId: state.video.videoId
   };
 }
 

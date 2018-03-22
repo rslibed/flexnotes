@@ -2,46 +2,16 @@
     height: 100%;
     box-sizing: border-box;
     background-color: ghostwhite;
-
-}
-
-.emoji {
-    font-size: 2em;
 }
 
 .text-editor {
     height: 100%;
     overflow: hidden;
-    margin-bottom: -500em;
 }
 
 .editor {
-    padding-top: 2vmin;
-    padding-left: 2vmin;
-    padding-right: 2vmin;
+    padding: 2vmin 2vmin 0 2vmin;
     height: 100%;
-}
-
-.notesUnorderedList li::before {
-    content: "•";
-    padding: 0 8px 0 28px;
-    color: rgba(0,0,0,0.87);
-}
-
-code {
-    display: inline-block;
-    background-color: #d5d5d5;
-    color: #0288d1;
-    padding: 0 0.5em;
-    font-family: 'Overpass Mono', sans-serif !important;
-    line-height: 1.56;
-}
-
-blockquote {
-    border-left: 5px solid #0288d1 !important;
-    color: #0288d1;
-    font-style: italic;
-    margin: 0 !important;
 }
 
 .notes-component.fifth-step{
@@ -65,7 +35,7 @@ blockquote {
 .stylingButtons {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: space-between;
     height: 40%;
     width: 100%;
@@ -161,19 +131,45 @@ blockquote {
     }
 }
 
-/*@media only screen and (max-width: 430px) {*/
-    /*.stylingButtons.secondRow {*/
-        /*flex-wrap: wrap;*/
-    /*}*/
-/*}*/
-
 @media only screen and (max-width: 422px) {
     .search-input.keyword {
         margin-top: 1em;
     }
 }
 
-/*--------------------------- HOVER OPTIONS ---------------------------*/
+/*--------------------------- OUTPUT ---------------------------*/
+
+.emoji {
+    font-size: 2em;
+}
+
+strong {
+    font-weight: 900 !important;
+}
+
+.notesUnorderedList li::before {
+    content: "•";
+    padding: 0 8px 0 28px;
+    color: rgba(0,0,0,0.87);
+}
+
+code {
+    display: inline-block;
+    background-color: #d5d5d5;
+    color: #0288d1;
+    padding: 0 0.5em;
+    font-family: 'Overpass Mono', sans-serif !important;
+    line-height: 1.56;
+}
+
+blockquote {
+    border-left: 5px solid #0288d1 !important;
+    color: #0288d1;
+    font-style: italic;
+    margin: 0 !important;
+}
+
+/*--------------------------- COLOR/EMOJI OPTIONS ---------------------------*/
 
 .hoverOptions {
     float: left;
@@ -184,29 +180,26 @@ blockquote {
     font-size: 16px;
     border: none;
     outline: none;
-    /*padding: 14px 16px;*/
-    background-color: inherit;
-    font-family: inherit;
     margin: 0;
 }
 
-.fontColor-options {
+.fontColor-options, .emoji-options {
     display: none;
     position: absolute;
-    height: 3.8em;
-    width: 6em;
-    background-color: #ddd;
-    padding: 0.3em 0 0 0.3em;
+    background-color: white;
 
 }
 
-.emoji-options {
-    display: none;
-    position: absolute;
-    height: 23.7em;
-    width: 2.5em;
-    background-color: #ddd;
+.fontColor-options {
+    height: 3.8em;
+    width: 6em;
     padding: 0.3em 0 0 0.3em;
+}
+
+.emoji-options {
+    height: 23.5em;
+    width: 2.6em;
+    padding: 0.3em 0 0 0.4em;
 }
 
 .fontColor-options .fontColor {
@@ -215,8 +208,6 @@ blockquote {
     display: block;
     text-align: left;
 }
-
-
 
 .hoverOptions:hover .fontColor-options {
     display: flex;
@@ -276,4 +267,61 @@ blockquote {
 
 .textAreaEmoji {
     cursor: pointer;
+}
+
+/*--------------------------- FONT OPTIONS ---------------------------*/
+
+.font-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.font-styles {
+    display: none;
+    position: absolute;
+    background-color: white;
+    min-width: 150px;
+    z-index: 1;
+}
+
+.font-dropdown:hover .font-styles {
+    display: block;
+    cursor: pointer;
+}
+
+.font-dropdown p:hover {
+    display: block;
+    cursor: pointer;
+    background-color: #455a64;
+    color: white;
+}
+
+.fonts {
+    margin: 0;
+    padding: 1.5em 1em;
+    line-height: 0;
+}
+
+.arial {
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.comic {
+    font-family: "Comic Sans MS", cursive, sans-serif;
+}
+
+.courier {
+    font-family: "Courier New", Courier, monospace;
+}
+
+.impact {
+    font-family: Impact, Charcoal, sans-serif;
+}
+
+.roboto {
+    font-family: 'Roboto', sans-serif;
+}
+
+.times {
+    font-family: "Times New Roman", Times, serif;
 }

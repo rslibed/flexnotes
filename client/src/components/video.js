@@ -16,6 +16,9 @@ class Video extends Component {
     this.pageId = null;
     this.currentVideoList = null;
     this.currentPlaylistItems = [];
+    this.state = {
+      width: window.innerWidth
+    };
   }
   async search(values) {
     if (!values.video) {
@@ -44,8 +47,6 @@ class Video extends Component {
         videoTitle: currentVideo.snippet.title,
         videoId: currentVideo.id.videoId,
         url: `https://www.youtube.com/embed/${currentVideo.id.videoId}`,
-        description: currentVideo.snippet.description,
-        channelId: currentVideo.snippet.channelId,
         thumbnails: currentVideo.snippet.thumbnails
       };
       videos.push(vidObject);
@@ -53,6 +54,12 @@ class Video extends Component {
     this.props.getVideoResults(videos);
   }
   componentWillMount() {
+    const { width } = this.state;
+    const isMobile = width <= 767;
+    if (isMobile) {
+      this.updateVideoComponent(this.props);
+      return;
+    }
     let { tab_arr_obj } = this.props.binderObj;
     let { interface_obj } = this.props;
     if (tab_arr_obj) {
@@ -72,21 +79,19 @@ class Video extends Component {
           break;
         }
       }
+
       if (
+        page_arr_obj[pageIndex].video.length === 0 ||
         typeof page_arr_obj[pageIndex].video[0].videoURL === 'undefined' ||
         typeof page_arr_obj[pageIndex].video[0].videoURL === ''
       ) {
-        // return;
         this.props.setVideoUrl('');
       } else {
         this.props.setVideoUrl(page_arr_obj[pageIndex].video[0].videoId);
       }
     }
   }
-  // shouldComponentUpdate() {
-  //   this.props.updateBinderArray();
-  //   return true;
-  // }
+
   componentWillReceiveProps(nextProps) {
     const { interface_obj } = this.props;
     if (interface_obj.page_id !== nextProps.interface_obj.page_id) {
@@ -120,9 +125,6 @@ class Video extends Component {
         currentPage.hasOwnProperty('video') &&
         currentPage.video.length >= 1
       ) {
-        // this.props.setVideoUrl(currentPage.video[0].videoId, interface_obj);
-        this.props.slideOutVideoSearch(false, 'translateY(-119px)');
-        // this.props.setVideoPlaylist(currentPage.video);
         this.binderId = nextProps.binderObj._id;
         this.tabId = tab_arr_obj[tabIndex]._id;
         this.pageId = page_arr_obj[pageIndex]._id;
@@ -130,7 +132,6 @@ class Video extends Component {
         this.currentPlaylistItems = page_arr_obj[pageIndex].video;
       } else {
         this.props.setVideoUrl('', interface_obj);
-        this.props.slideOutVideoSearch(true, 'translateY(27px)');
         this.binderId = nextProps.binderObj._id;
         this.tabId = tab_arr_obj[tabIndex]._id;
         this.pageId = page_arr_obj[pageIndex]._id;
@@ -140,7 +141,13 @@ class Video extends Component {
       this.props
         .getVideoPlaylist(this.binderId, this.tabId, this.pageId)
         .then(() => {
-          this.props.setVideoUrl(this.props.playlistItems[0].videoId);
+          if (this.props.playlistItems.length > 0) {
+            this.props.setVideoUrl(this.props.playlistItems[0].videoId);
+            this.props.slideOutVideoSearch(false);
+          }
+          if (this.props.playlistItems[0].videoId === undefined) {
+            this.props.slideOutVideoSearch(true);
+          }
         });
     }
   }
@@ -183,18 +190,10 @@ class Video extends Component {
                 >
                   <i className="material-icons">search</i>
                 </button>
-
                 <button
                   className="btn results-btn vid-right-arrow video-btn"
                   onClick={() => {
-                    this.props.getResultStyles(
-                      this.props.resultsStyles,
-                      this.props.toggleResultsBool
-                    );
-                    this.props.getOpacityDisplay(
-                      this.props.opacityContainer,
-                      this.props.toggleResultsBool
-                    );
+                    this.props.getResultStyles(this.props.toggleResultsBool);
                   }}
                 >
                   <i className="material-icons">close</i>
@@ -213,7 +212,12 @@ class Video extends Component {
           currentPlaylistItems={this.props.playlistItems}
         />
         <div id="video-wrapper" className="video-wrapper third-step">
-          <VideoContainer currentPlaylistItems={this.props.playlistItems} />
+          <VideoContainer
+            binderId={this.props.interface_obj.binder_id}
+            tabId={this.props.interface_obj.tab_id}
+            pageId={this.props.interface_obj.page_id}
+            currentPlaylistItems={this.props.playlistItems}
+          />
         </div>
       </div>
     );
@@ -226,18 +230,12 @@ Video = reduxForm({
 
 function mapStateToProps(state) {
   return {
-    pastedVideoUrl: state.videoResults.videoLink,
     videoResults: state.video.results,
     resultsStyles: state.video.resultsStyles,
-    opacityContainer: state.video.opacityDisplay,
     toggleResultsBool: state.video.toggleResults,
     interface_obj: state.interface,
     binderObj: state.binder.binderObj,
-    slideOutStyles: state.video.videoLinkSlideOut,
-    toggleSlideOut: state.video.toggleSlideOut,
-    playlistStyles: state.video.playlistStyles,
-    playlistItems: state.video.addedVideo,
-    videoLink: state.video.videoLink
+    playlistItems: state.video.addedVideo
   };
 }
 
